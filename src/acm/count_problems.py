@@ -11,11 +11,11 @@ pip install xlrd,xlwt,requests
 
 # 填比赛id
 lnks = [
-    '464516',
-    '466424',
-    '466991',
-    '469629',
-    '469630',
+    ('464516',1),
+    ('466424',2),
+    ('466991',2),
+    ('469629',2),
+    ('469630',2),
 ]
 output = 'tj.xls'        # 输出文件名
 
@@ -25,6 +25,8 @@ class Player():
     sol: int
     name: str
     nick: str
+    score: int = 0
+
     details: dict = field(default_factory=dict)
     star: bool = False
     ps: str = ''
@@ -72,7 +74,7 @@ read_time = lambda x: int((datetime.datetime.strptime(x, '%H:%M:%S')-dt).total_s
 write_time = lambda x: f"{x//3600:0>2}:{x%3600//60:0>2}:{x%60:0>2}"
 
 import requests
-for task in lnks:
+for task, weight in lnks:
     r = requests.post(f"https://vjudge.net/contest/rank/single/{task}")
     print(task, r)
     j = json.loads(r.text)
@@ -91,6 +93,7 @@ for task in lnks:
             else:
                 plrd[uid].pen+=1200*penalty+ti
                 plrd[uid].sol+=1
+                plrd[uid].score+=weight
 
                 plrd[uid].details[tid] = -1
         else:
@@ -119,9 +122,9 @@ print(len(plr))
 import functools
 
 def plrcmp(x1: Player, x2: Player) -> bool:
-    if x1.sol > x2.sol:
+    if x1.score > x2.score:
         return -1
-    elif x1.sol < x2.sol:
+    elif x1.score < x2.score:
         return 1
     else:
         if x1.pen < x2.pen:
@@ -131,7 +134,8 @@ def plrcmp(x1: Player, x2: Player) -> bool:
         else:
             return 0
 
-plr.sort(key=functools.cmp_to_key(plrcmp))
+# plr.sort(key=functools.cmp_to_key(plrcmp))
+plr.sort(key=lambda x: (-x.score, -x.sol, x.pen))
 
 owb = xlwt.Workbook()
 ows = owb.add_sheet('flitered')
@@ -146,7 +150,7 @@ def clen(s):
 def updcolwid(ind, ite): colwid[ind] = max(colwid[ind], clen(str(ite)))
 
 
-for p, i in enumerate(['排名', '用户id', '题数', '罚时', '昵称']):
+for p, i in enumerate(['排名', '用户id', '题数', '分数', '罚时', '昵称']):
     ows.write(0, p, i, set_style())
     colwid.append(clen(i))
 
@@ -166,8 +170,11 @@ for p, i in enumerate(plr):
     ows.write(1+p, 2, str(i.sol), set_style())
     updcolwid(2, i.sol)
 
-    ows.write(1+p, 3, write_time(i.pen), set_style(center=True))
-    updcolwid(3, write_time(i.pen))
+    ows.write(1+p, 3, str(i.score), set_style())
+    updcolwid(3, i.score)
+
+    ows.write(1+p, 4, write_time(i.pen), set_style(center=True))
+    updcolwid(4, write_time(i.pen))
 
     # for k, v in i.details.items():
     #     ofs = ord(k) - 65
@@ -180,8 +187,8 @@ for p, i in enumerate(plr):
     #     if ostr:
     #         ows.write(1+p, 4+ofs, ostr, set_style(center=True))
     #         updcolwid(4+ofs, max(ostl, key=lambda x: clen(x)))
-    ows.write(1+p, 4+tctr+0, i.nick, set_style())
-    updcolwid(4+tctr+0, i.nick)
+    ows.write(1+p, 5+tctr+0, i.nick, set_style())
+    updcolwid(5+tctr+0, i.nick)
     # if i.ps:
         # ows.write(1+p, 4+tctr+2, f"已经去掉{i.ps}个cin罚时", set_style())
         # updcolwid(4+tctr+2, f"已经去掉{i.ps}个cin罚时")
