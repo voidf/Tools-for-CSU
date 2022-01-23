@@ -1,4 +1,9 @@
-import xlrd, xlwt, datetime, json
+import functools
+import requests
+import xlrd
+import xlwt
+import datetime
+import json
 from dataclasses import dataclass, field
 """
 依赖库：xlrd xlwt requests
@@ -11,13 +16,14 @@ pip install xlrd,xlwt,requests
 
 # 填比赛id
 lnks = [
-    ('464516',1),
-    ('466424',2),
-    ('466991',2),
-    ('469629',2),
-    ('469630',2),
+    ('464516', 1),
+    ('466424', 2),
+    ('466991', 2),
+    ('469629', 2),
+    ('469630', 2),
 ]
 output = 'tj.xls'        # 输出文件名
+
 
 @dataclass
 class Player():
@@ -32,25 +38,24 @@ class Player():
     ps: str = ''
 
 
-
 def set_style(name='Times New Roman', height=200, star=False, bold=False, format_str='', center=False):
     style = xlwt.XFStyle()  # 初始化样式
- 
+
     font = xlwt.Font()  # 为样式创建字体
     font.name = name  # 'Times New Roman'
     font.bold = bold
     font.height = height
- 
-    borders= xlwt.Borders() # 为样式创建边框
-    borders.left= 6
-    borders.right= 6
-    borders.top= 6
-    borders.bottom= 6
- 
+
+    borders = xlwt.Borders()  # 为样式创建边框
+    borders.left = 6
+    borders.right = 6
+    borders.top = 6
+    borders.bottom = 6
+
     style.font = font
     style.borders = borders
-    style.num_format_str= format_str
-    
+    style.num_format_str = format_str
+
     if star:
         pat = xlwt.Pattern()
         pat.pattern = xlwt.Pattern.SOLID_PATTERN
@@ -70,10 +75,14 @@ tctr = 0
 
 dt = datetime.datetime.strptime('0', '%S')
 
-read_time = lambda x: int((datetime.datetime.strptime(x, '%H:%M:%S')-dt).total_seconds())
-write_time = lambda x: f"{x//3600:0>2}:{x%3600//60:0>2}:{x%60:0>2}"
 
-import requests
+def read_time(x): return int(
+    (datetime.datetime.strptime(x, '%H:%M:%S')-dt).total_seconds())
+
+
+def write_time(x): return f"{x//3600:0>2}:{x%3600//60:0>2}:{x%60:0>2}"
+
+
 for task, weight in lnks:
     r = requests.post(f"https://vjudge.net/contest/rank/single/{task}")
     print(task, r)
@@ -83,7 +92,7 @@ for task, weight in lnks:
         if k not in plrd:
             plrd[k] = Player(0, 0, v[0], v[1])
         plrd[k].details = {}
-    
+
     for uid, tid, sta, ti in j['submissions']:
         uid = int(uid)
         if sta:
@@ -91,9 +100,9 @@ for task, weight in lnks:
             if penalty < 0:
                 continue
             else:
-                plrd[uid].pen+=1200*penalty+ti
-                plrd[uid].sol+=1
-                plrd[uid].score+=weight
+                plrd[uid].pen += 1200*penalty+ti
+                plrd[uid].sol += 1
+                plrd[uid].score += weight
 
                 plrd[uid].details[tid] = -1
         else:
@@ -106,7 +115,6 @@ for k, v in plrd.items():
     plr.append(v)
 
 
-
 # for itm in luogu['scoreboard']['result']:
 #     usr = itm['user']
 #     if usr['name'] in luogu_isnot_star:
@@ -116,10 +124,9 @@ for k, v in plrd.items():
 #     for k, v in itm['details'].items():
 #         p.details[T2t[k]] = v
 #     plr.append(p)
-    
+
 print(len(plr))
 
-import functools
 
 def plrcmp(x1: Player, x2: Player) -> bool:
     if x1.score > x2.score:
@@ -134,6 +141,7 @@ def plrcmp(x1: Player, x2: Player) -> bool:
         else:
             return 0
 
+
 # plr.sort(key=functools.cmp_to_key(plrcmp))
 plr.sort(key=lambda x: (-x.score, -x.sol, x.pen))
 
@@ -141,12 +149,18 @@ owb = xlwt.Workbook()
 ows = owb.add_sheet('flitered')
 
 colwid = []
+
+
 def clen(s):
     l = 0
     for i in s:
-        if ord(i)<256: l+=1
-        else: l+=2
+        if ord(i) < 256:
+            l += 1
+        else:
+            l += 2
     return l
+
+
 def updcolwid(ind, ite): colwid[ind] = max(colwid[ind], clen(str(ite)))
 
 
@@ -162,7 +176,7 @@ for p, i in enumerate(plr):
         ows.write(1+p, 0, '*', set_style())
     else:
         ows.write(1+p, 0, rks, set_style())
-        rks+=1
+        rks += 1
 
     ows.write(1+p, 1, i.name, set_style(star=i.star))
     updcolwid(1, i.name)
@@ -190,8 +204,8 @@ for p, i in enumerate(plr):
     ows.write(1+p, 5+tctr+0, i.nick, set_style())
     updcolwid(5+tctr+0, i.nick)
     # if i.ps:
-        # ows.write(1+p, 4+tctr+2, f"已经去掉{i.ps}个cin罚时", set_style())
-        # updcolwid(4+tctr+2, f"已经去掉{i.ps}个cin罚时")
+    # ows.write(1+p, 4+tctr+2, f"已经去掉{i.ps}个cin罚时", set_style())
+    # updcolwid(4+tctr+2, f"已经去掉{i.ps}个cin罚时")
 
 print(colwid)
 
