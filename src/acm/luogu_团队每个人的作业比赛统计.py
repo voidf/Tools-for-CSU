@@ -1,5 +1,5 @@
 import os
-os.system('pip install pydantic xlwt requests')
+os.system('pip install pydantic xlwt requests brotli')
 
 from time import sleep
 from pydantic import BaseModel
